@@ -1,9 +1,7 @@
-﻿using System.Text.Json.Serialization;
-
-namespace AdventureLandSharp.Core.HttpApi;
+﻿namespace AdventureLandSharp.Core.HttpApi;
 
 [HttpApiMessage("servers_and_characters")]
-public readonly record struct ServersAndCharactersRequest();
+public readonly record struct ServersAndCharactersRequest;
 
 public readonly record struct ServersAndCharactersResponse(
     [property: JsonPropertyName("rewards")] List<object> Rewards,
@@ -36,4 +34,3 @@ public readonly record struct ApiCharacter(
     [property: JsonPropertyName("type")] string Type,
     [property: JsonPropertyName("id")] string Id
 );
-

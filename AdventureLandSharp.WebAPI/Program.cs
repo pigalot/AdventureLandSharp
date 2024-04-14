@@ -26,10 +26,11 @@ builder.Services.AddControllers()
         }
     });
 builder.Services.AddCors(opts => {
-    opts.AddPolicy("Any", x => { x
-        .AllowAnyOrigin()
-        .AllowAnyHeader()
-        .AllowAnyMethod();
+    opts.AddPolicy("Any", x => {
+        x
+            .AllowAnyOrigin()
+            .AllowAnyHeader()
+            .AllowAnyMethod();
     });
 });
 builder.Services.AddEndpointsApiExplorer();
@@ -37,8 +38,7 @@ builder.Services.AddSwaggerGen();
 
 WebApplication app = builder.Build();
 
-if (app.Environment.IsDevelopment())
-{
+if (app.Environment.IsDevelopment()) {
     app.UseSwagger();
     app.UseSwaggerUI();
 }

@@ -1,23 +1,23 @@
-using AdventureLandSharp.Core;
-using AdventureLandSharp.Core.SocketApi;
+using Raylib_cs;
 
 namespace AdventureLandSharp;
 
 #if WITH_GUI
-using Raylib_cs;
-using System.Numerics;
-
 public class GameGui : IDisposable {
     public GameGui(World world, Socket socket) {
         Raylib.SetConfigFlags(ConfigFlags.ResizableWindow);
-        Raylib.InitWindow(_width, _height, $"Adventure Land");
+        Raylib.InitWindow(_width, _height, "Adventure Land");
         _world = world;
         _socket = socket;
     }
 
+    public void Dispose() {
+        Raylib.CloseWindow();
+    }
+
     public bool Update() {
         Raylib.BeginDrawing();
-        Raylib.ClearBackground(new Color(48, 48, 48, 255));
+        Raylib.ClearBackground(new(48, 48, 48, 255));
 
         LocalPlayer player = _socket.Player;
 
@@ -30,16 +30,16 @@ public class GameGui : IDisposable {
         DrawMapBoundaries(map);
 
         foreach (Entity e in _socket.Entities) {
-            Color col = e switch { 
+            Color col = e switch {
                 Npc => Color.White,
                 Monster => Color.Red,
                 Player => Color.Purple,
                 _ => throw new()
             };
 
-            if (e.MovementPlan != null) {
-                Raylib.DrawLine((int)e.Position.X, (int)e.Position.Y, (int)e.MovementPlan.Goal.X, (int)e.MovementPlan.Goal.Y, col);
-            }
+            if (e.MovementPlan != null)
+                Raylib.DrawLine((int)e.Position.X, (int)e.Position.Y, (int)e.MovementPlan.Goal.X,
+                    (int)e.MovementPlan.Goal.Y, col);
 
             Raylib.DrawCircle((int)e.Position.X, (int)e.Position.Y, 4, col);
             Raylib.DrawText(e.Name, (int)e.Position.X, (int)e.Position.Y - 16, 12, col);
@@ -47,25 +47,18 @@ public class GameGui : IDisposable {
 
         Raylib.DrawCircle((int)player.Position.X, (int)player.Position.Y, 4, Color.SkyBlue);
 
-        if (player.MovementPlan is PathMovementPlan pathPlan) {
-            DrawPath([.. pathPlan.Path], Color.Green);
-        }
+        if (player.MovementPlan is PathMovementPlan pathPlan) DrawPath([.. pathPlan.Path], Color.Green);
 
         Raylib.EndMode2D();
         Raylib.EndDrawing();
 
         return !Raylib.WindowShouldClose();
     }
-
-    public void Dispose() {
-        Raylib.CloseWindow();
-    }
-
-    private const int _width = 1920;
     private const int _height = 1080;
-    private Camera2D _cam = new(Vector2.Zero, Vector2.Zero, 0.0f, 1.0f);
-    private readonly World _world;
+    private const int _width = 1920;
     private readonly Socket _socket;
+    private readonly World _world;
+    private Camera2D _cam = new(Vector2.Zero, Vector2.Zero, 0.0f, 1.0f);
 
     private static void DrawMapBoundaries(Map map) {
         GameLevelGeometry level = map.Geometry;
@@ -80,19 +73,18 @@ public class GameGui : IDisposable {
     }
 
     private static void DrawMapGrid(Map map) {
-        for (int x = 0; x < map.Grid.Width; x++) {
-            for (int y = 0; y < map.Grid.Height; y++) {
-                Vector2 pos = map.Grid.GridToWorld(new(x, y));
-                if (map.Grid.IsWalkable(pos)) {
-                    Raylib.DrawRectangle((int)pos.X, (int)pos.Y, MapGrid.CellSize, MapGrid.CellSize, new Color(64, 64, 64, 255));
-                }
-            }
+        for (int x = 0; x < map.Grid.Width; x++)
+        for (int y = 0; y < map.Grid.Height; y++) {
+            Vector2 pos = map.Grid.GridToWorld(new(x, y));
+            if (map.Grid.IsWalkable(pos))
+                Raylib.DrawRectangle((int)pos.X, (int)pos.Y, MapGrid.CellSize, MapGrid.CellSize,
+                    new(64, 64, 64, 255));
         }
     }
 
     private static void DrawPath(IReadOnlyList<Vector2> path, Color color) {
         for (int i = 0; i < path.Count - 1; i++) {
-            Raylib.DrawLineEx(path[i], path[i+1], 4.0f, color);
+            Raylib.DrawLineEx(path[i], path[i + 1], 4.0f, color);
         }
     }
 }

@@ -9,14 +9,6 @@ namespace AdventureLandSharp.WebAPI.Controllers;
 [Route("[controller]")]
 [Produces("application/json")]
 public class PathfindingController(World world) : ControllerBase {
-    public readonly record struct GridResponse(
-        int CellSize,
-        int Width,
-        int Height,
-        IEnumerable<bool> TerrainWalkableXY,
-        IEnumerable<float> TerrainCostXY
-    );
-
     [HttpGet("Grid/{map}", Name = "GetPathfindingGrid")]
     [JsonSettingsName("condensed")]
     [ProducesResponseType(typeof(GridResponse), StatusCodes.Status200OK)]
@@ -28,39 +20,18 @@ public class PathfindingController(World world) : ControllerBase {
             List<bool> walkable = [];
             List<float> cost = [];
 
-            for (int y = 0; y < grid.Height; ++y) {
-                for (int x = 0; x < grid.Width; ++x) {
-                    MapGridCell cell = new(x, y);
-                    walkable.Add(grid.IsWalkable(cell));
-                    cost.Add(grid.Cost(cell));
-                }
+            for (int y = 0; y < grid.Height; ++y)
+            for (int x = 0; x < grid.Width; ++x) {
+                MapGridCell cell = new(x, y);
+                walkable.Add(grid.IsWalkable(cell));
+                cost.Add(grid.Cost(cell));
             }
 
             return Ok(new GridResponse(MapGrid.CellSize, grid.Width, grid.Height, walkable, cost));
         }
+
         return BadRequest($"Map '{map}' not found.");
     }
-
-    public readonly record struct PathLocation(string Map, Vector2 Location);
-
-    public readonly record struct PathRequest(
-        PathLocation Source,
-        PathLocation Dest,
-        MapGridHeuristic Heuristic = MapGridHeuristic.Diagonal,
-        bool HumanReadable = false
-    );
-
-    [JsonDerivedType(typeof(PathResponseInterMapStep))]
-    [JsonDerivedType(typeof(PathResponseIntraMapStep))]
-    [JsonDerivedType(typeof(PathResponseTeleportStep))]
-    public interface IPathResponseStep { 
-        public PathLocation Source { get; }
-        public PathLocation Dest { get; }
-    }
-
-    public readonly record struct PathResponseInterMapStep(PathLocation Source, PathLocation Dest, MapConnectionType Type) : IPathResponseStep;
-    public readonly record struct PathResponseIntraMapStep(PathLocation Source, PathLocation Dest, Vector2[] Path) : IPathResponseStep;
-    public readonly record struct PathResponseTeleportStep(PathLocation Source, PathLocation Dest, bool Teleport = true) : IPathResponseStep;
 
     [HttpPost("Path", Name = "GetPathfindingPath")]
     [JsonSettingsName("condensed")]
@@ -76,9 +47,9 @@ public class PathfindingController(World world) : ControllerBase {
 
             IEnumerable<IMapGraphEdge> path = world.FindRoute(start, end, req.Heuristic);
 
-            return req.HumanReadable ?
-                Ok(path.Select(x => x.ToString())) :
-                Ok(path.Select<IMapGraphEdge, IPathResponseStep>(x => x switch {
+            return req.HumanReadable
+                ? Ok(path.Select(x => x.ToString()))
+                : Ok(path.Select<IMapGraphEdge, IPathResponseStep>(x => x switch {
                     MapGraphEdgeInterMap edge => new PathResponseInterMapStep(
                         new(edge.Source.Map.Name, edge.Source.Location),
                         new(edge.Dest.Map.Name, edge.Dest.Location),
@@ -99,4 +70,40 @@ public class PathfindingController(World world) : ControllerBase {
 
         return BadRequest($"Maps '{req.Source.Map}' or '{req.Dest.Map}' not found.");
     }
+
+    public readonly record struct GridResponse(
+        int CellSize,
+        int Width,
+        int Height,
+        IEnumerable<bool> TerrainWalkableXY,
+        IEnumerable<float> TerrainCostXY
+    );
+
+    public readonly record struct PathLocation(string Map, Vector2 Location);
+
+    public readonly record struct PathRequest(
+        PathLocation Source,
+        PathLocation Dest,
+        MapGridHeuristic Heuristic = MapGridHeuristic.Diagonal,
+        bool HumanReadable = false
+    );
+
+    [JsonDerivedType(typeof(PathResponseInterMapStep))]
+    [JsonDerivedType(typeof(PathResponseIntraMapStep))]
+    [JsonDerivedType(typeof(PathResponseTeleportStep))]
+    public interface IPathResponseStep {
+        public PathLocation Source { get; }
+        public PathLocation Dest { get; }
+    }
+
+    public readonly record struct PathResponseInterMapStep(
+        PathLocation Source,
+        PathLocation Dest,
+        MapConnectionType Type) : IPathResponseStep;
+
+    public readonly record struct PathResponseIntraMapStep(PathLocation Source, PathLocation Dest, Vector2[] Path)
+        : IPathResponseStep;
+
+    public readonly record struct PathResponseTeleportStep(PathLocation Source, PathLocation Dest, bool Teleport = true)
+        : IPathResponseStep;
 }

@@ -1,6 +1,4 @@
-﻿using System.Text.Json.Serialization;
-
-namespace AdventureLandSharp.Core.HttpApi;
+﻿namespace AdventureLandSharp.Core.HttpApi;
 
 [HttpApiMessage("signup_or_login")]
 public readonly record struct SignupOrLoginRequest(

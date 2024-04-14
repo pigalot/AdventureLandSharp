@@ -1,10 +1,3 @@
-using NetTopologySuite;
-using NetTopologySuite.Geometries;
-using NetTopologySuite.Index.Strtree;
-using System.Diagnostics;
-using System.Numerics;
-using System.Runtime.CompilerServices;
-
 namespace AdventureLandSharp.Core;
 
 public enum MapGridHeuristic {
@@ -19,17 +12,23 @@ public readonly record struct MapGridCell(int X, int Y) : IComparable<MapGridCel
         : this((int)(grid.X + 0.5f), (int)(grid.Y + 0.5f)) { }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
-    public float Cost(MapGridCell other, MapGridHeuristic heuristic) => heuristic switch {
-        MapGridHeuristic.Manhattan => ManhattanDistance(this, other),
-        MapGridHeuristic.Euclidean => EuclideanDistance(this, other),
-        MapGridHeuristic.Diagonal => DiagonalDistance(this, other),
-        _ => throw new ArgumentOutOfRangeException(nameof(heuristic))
-    };
+    public int CompareTo(MapGridCell other) {
+        int xComparison = X.CompareTo(other.X);
+        return xComparison == 0 ? Y.CompareTo(other.Y) : xComparison;
+    }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
-    public static float ManhattanDistance(MapGridCell lhs, MapGridCell rhs) {
-        return MathF.Abs(lhs.X - rhs.X) + MathF.Abs(lhs.Y - rhs.Y);
+    public float Cost(MapGridCell other, MapGridHeuristic heuristic) {
+        return heuristic switch {
+            MapGridHeuristic.Manhattan => ManhattanDistance(this, other),
+            MapGridHeuristic.Euclidean => EuclideanDistance(this, other),
+            MapGridHeuristic.Diagonal => DiagonalDistance(this, other),
+            _ => throw new ArgumentOutOfRangeException(nameof(heuristic))
+        };
     }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
+    public static float ManhattanDistance(MapGridCell lhs, MapGridCell rhs) => MathF.Abs(lhs.X - rhs.X) + MathF.Abs(lhs.Y - rhs.Y);
 
     [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
     public static float EuclideanDistance(MapGridCell lhs, MapGridCell rhs) {
@@ -44,39 +43,38 @@ public readonly record struct MapGridCell(int X, int Y) : IComparable<MapGridCel
         float dmin = MathF.Min(MathF.Abs(lhs.X - rhs.X), MathF.Abs(lhs.Y - rhs.Y));
         return 1.4142136f * dmin + (dmax - dmin);
     }
-
-    [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
-    public int CompareTo(MapGridCell other) {
-        int xComparison = X.CompareTo(other.X);
-        return xComparison == 0 ? Y.CompareTo(other.Y) : xComparison;
-    }
 }
 
 public readonly record struct MapGridCellData(bool Walkable, float Cost);
-
 public readonly record struct MapGridPath(float Cost, List<MapGridCell> Points);
 
-public readonly record struct MapGridPathSettings(MapGridHeuristic Heuristic, IReadOnlyDictionary<MapGridCell, float>? DynamicCosts) {
+public readonly record struct MapGridPathSettings(
+    MapGridHeuristic Heuristic,
+    IReadOnlyDictionary<MapGridCell, float>? DynamicCosts) {
     public MapGridPathSettings() : this(MapGridHeuristic.Diagonal, null) { }
+
     public MapGridPathSettings(MapGridHeuristic heuristic) : this(heuristic, null) { }
-    public MapGridPathSettings(IReadOnlyDictionary<MapGridCell, float> dynamicCosts) : this(MapGridHeuristic.Diagonal, dynamicCosts) { }
+
+    public MapGridPathSettings(IReadOnlyDictionary<MapGridCell, float> dynamicCosts) : this(MapGridHeuristic.Diagonal,
+        dynamicCosts) { }
 }
 
 public class MapGrid {
-    public const int CellSize = 8;
-    public const int CellWallUnwalkable = 6;
-    public const int CellWallAvoidance = CellSize;
-
-    public MapGrid(GameDataMap mapData, GameLevelGeometry mapGeometry) {
-        _terrain = CreateTerrain(mapData, mapGeometry);
-        _width = _terrain.GetLength(0);
-        _height = _terrain.GetLength(1);
+    public MapGrid(ref readonly GameDataMap mapData, ref readonly GameLevelGeometry mapGeometry) {
+        Terrain = CreateTerrain(mapData, mapGeometry);
+        Width = Terrain.GetLength(0);
+        Height = Terrain.GetLength(1);
         _mapGeometry = mapGeometry;
     }
+    public const int CellSize = 8;
+    public const int CellWallAvoidance = CellSize;
+    public const int CellWallUnwalkable = 6;
 
-    public MapGridCellData[,] Terrain => _terrain;
-    public int Width => _width;
-    public int Height => _height;
+    public MapGridCellData[,] Terrain { get; }
+
+    public int Width { get; }
+
+    public int Height { get; }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public MapGridCell WorldToGrid(double x, double y) => WorldToGrid(_mapGeometry, x, y);
@@ -88,35 +86,32 @@ public class MapGrid {
     public Vector2 GridToWorld(MapGridCell pos) => GridToWorld(_mapGeometry, pos);
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public bool IsWithinBounds(MapGridCell pos) => pos.X >= 0 && pos.X < _width && pos.Y >= 0 && pos.Y < _height;
+    public bool IsWithinBounds(MapGridCell pos) => pos.X >= 0 && pos.X < Width && pos.Y >= 0 && pos.Y < Height;
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public bool IsWithinBounds(Vector2 pos) => IsWithinBounds(WorldToGrid(pos));
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public bool IsWalkable(MapGridCell pos) => IsWithinBounds(pos) && _terrain[pos.X, pos.Y].Walkable;
+    public bool IsWalkable(MapGridCell pos) => IsWithinBounds(pos) && Terrain[pos.X, pos.Y].Walkable;
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public bool IsWalkable(Vector2 pos) => IsWalkable(WorldToGrid(pos));
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public float Cost(MapGridCell pos) => IsWithinBounds(pos) ? _terrain[pos.X, pos.Y].Cost : float.MaxValue;
+    public float Cost(MapGridCell pos) => IsWithinBounds(pos) ? Terrain[pos.X, pos.Y].Cost : float.MaxValue;
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public float Cost(Vector2 pos) => Cost(WorldToGrid(pos));
 
-    public MapGridPath IntraMap_AStar(Vector2 start, Vector2 goal, MapGridPathSettings? settings = null) =>
-        IntraMap_AStar(WorldToGrid(start), WorldToGrid(goal), settings);
+    public MapGridPath IntraMap_AStar(Vector2 start, Vector2 goal, MapGridPathSettings? settings = null) => IntraMap_AStar(WorldToGrid(start), WorldToGrid(goal), settings);
 
     [MethodImpl(MethodImplOptions.AggressiveOptimization)]
     public MapGridPath IntraMap_AStar(MapGridCell start, MapGridCell goal, MapGridPathSettings? settings = null) {
         Debug.Assert(IsWalkable(start) && IsWalkable(goal), "IntraMap_AStar requires start and goal to be walkable.");
 
-        if (start == goal) {
-            return new(0, []);
-        }
+        if (start == goal) return new(0, []);
 
-        MapGridHeuristic heuristic = (settings ?? new()).Heuristic;
+        MapGridHeuristic heuristic = (settings ?? new MapGridPathSettings()).Heuristic;
         IReadOnlyDictionary<MapGridCell, float> dynamicCosts = settings?.DynamicCosts ?? new Dictionary<MapGridCell, float>();
 
         PriorityQueue<MapGridCell, float> queue = new();
@@ -127,45 +122,40 @@ public class MapGrid {
 
         queue.Enqueue(start, 0);
 
-        while (queue.TryDequeue(out MapGridCell pos, out float _) && pos != goal) {
-            float runningCost = runningCosts[pos];
-            closed.Add(pos);
+        while (queue.TryDequeue(out MapGridCell position, out float _) && position != goal) {
+            float runningCost = runningCosts[position];
+            closed.Add(position);
 
-            foreach (MapGridCell offset in _neighbourOffsets) {
-                MapGridCell neighbour = new(pos.X + offset.X, pos.Y + offset.Y);
+            foreach (MapGridCell offset in NeighbourOffsets) {
+                MapGridCell neighbour = new(position.X + offset.X, position.Y + offset.Y);
 
-                if (!IsWalkable(neighbour) || closed.Contains(neighbour)) {
-                    continue;
-                }
+                if (!IsWalkable(neighbour) || closed.Contains(neighbour)) continue;
 
-                float costToNeighbour = pos.Cost(neighbour, heuristic) * Cost(neighbour);
+                float costToNeighbour = position.Cost(neighbour, heuristic) * Cost(neighbour);
 
-                if (dynamicCosts.TryGetValue(neighbour, out float dynamicCost)) {
-                    costToNeighbour *= dynamicCost;
-                }
+                if (dynamicCosts.TryGetValue(neighbour, out float dynamicCost)) costToNeighbour *= dynamicCost;
 
                 float neighbourRunningCost = runningCost + costToNeighbour;
                 float neighbourTotalCost = neighbourRunningCost + neighbour.Cost(goal, heuristic);
 
-                if (!runningCosts.TryGetValue(neighbour, out float currentRunningCost) || neighbourRunningCost < currentRunningCost) {
-                    runningCosts[neighbour] = neighbourRunningCost;
-                    backtrack[neighbour] = pos;
-                    queue.Enqueue(neighbour, (float)neighbourTotalCost);
-                }
+                if (runningCosts.TryGetValue(neighbour, out float currentRunningCost) &&
+                    !(neighbourRunningCost < currentRunningCost)) continue;
+
+                runningCosts[neighbour] = neighbourRunningCost;
+                backtrack[neighbour] = position;
+                queue.Enqueue(neighbour, neighbourTotalCost);
             }
         }
 
         List<MapGridCell> backtrackPath = [];
-        MapGridCell backtrackPos = goal;
+        MapGridCell backtrackPosition = goal;
 
-        while (backtrack.TryGetValue(backtrackPos, out MapGridCell backtrackPrevPos)) {
-            backtrackPath.Add(backtrackPos);
-            backtrackPos = backtrackPrevPos;
+        while (backtrack.TryGetValue(backtrackPosition, out MapGridCell backtrackPrevPos)) {
+            backtrackPath.Add(backtrackPosition);
+            backtrackPosition = backtrackPrevPos;
         }
 
-        if (backtrackPos != start) {
-            return new(float.MaxValue, []);
-        }
+        if (backtrackPosition != start) return new(float.MaxValue, []);
 
         backtrackPath.Add(start);
         backtrackPath.Reverse();
@@ -175,24 +165,20 @@ public class MapGrid {
 
     [MethodImpl(MethodImplOptions.AggressiveOptimization)]
     public MapGridCell FindNearestWalkable(MapGridCell start, MapGridPathSettings? settings = null) {
-        if (IsWalkable(start)) {
-            return start;
-        }
+        if (IsWalkable(start)) return start;
 
-        MapGridHeuristic heuristic = (settings ?? new()).Heuristic;
+        MapGridHeuristic heuristic = (settings ?? new MapGridPathSettings()).Heuristic;
         PriorityQueue<MapGridCell, float> queue = new();
         HashSet<MapGridCell> closed = [];
 
         queue.Enqueue(start, 0);
         closed.Add(start);
 
-        while (queue.TryDequeue(out MapGridCell pos, out _)) {
-            if (IsWalkable(pos)) {
-                return pos;
-            }
+        while (queue.TryDequeue(out MapGridCell position, out _)) {
+            if (IsWalkable(position)) return position;
 
-            foreach (MapGridCell offset in _neighbourOffsets) {
-                MapGridCell neighbour = new(pos.X + offset.X, pos.Y + offset.Y);
+            foreach (MapGridCell offset in NeighbourOffsets) {
+                MapGridCell neighbour = new(position.X + offset.X, position.Y + offset.Y);
                 if (!closed.Contains(neighbour)) {
                     queue.Enqueue(neighbour, neighbour.Cost(start, heuristic));
                     closed.Add(neighbour);
@@ -200,7 +186,7 @@ public class MapGrid {
             }
         }
 
-        throw new Exception("No walkable cell found.");
+        throw new("No walkable cell found.");
     }
 
     [MethodImpl(MethodImplOptions.AggressiveOptimization)]
@@ -218,46 +204,39 @@ public class MapGrid {
 
         while (true) {
             MapGridCell cur = new(x0, y0);
-            
-            if (!IsWalkable(cur)) {
-                return false;
-            }
 
-            if (x0 == x1 && y0 == y1) {
-                break;
-            }
+            if (!IsWalkable(cur)) return false;
+
+            if (x0 == x1 && y0 == y1) break;
 
             int e2 = 2 * err;
             if (e2 > -dy) {
                 err -= dy;
                 x0 += sx;
             }
-            if (e2 < dx) {
-                err += dx;
-                y0 += sy;
-            }
+
+            if (e2 >= dx) continue;
+
+            err += dx;
+            y0 += sy;
         }
 
         return true;
     }
 
-
-    private readonly MapGridCellData[,] _terrain;
-    private readonly int _width;
-    private readonly int _height;
-    private readonly GameLevelGeometry _mapGeometry;
-    private static readonly MapGridCell[] _neighbourOffsets = [ 
-        new(-1,  0), new(1, 0), new(0, -1), new(0,  1),
+    private static readonly MapGridCell[] NeighbourOffsets = [
+        new(-1, 0), new(1, 0), new(0, -1), new(0, 1),
         new(-1, -1), new(1, 1), new(-1, 1), new(1, -1)
     ];
 
+    private readonly GameLevelGeometry _mapGeometry;
+
     [MethodImpl(MethodImplOptions.AggressiveOptimization | MethodImplOptions.AggressiveInlining)]
-    private static MapGridCell WorldToGrid(GameLevelGeometry geo, double x, double y) 
-        => WorldToGrid(geo, new((float)x, (float)y));
+    private static MapGridCell WorldToGrid(GameLevelGeometry geo, double x, double y) => WorldToGrid(geo, new((float)x, (float)y));
 
     [MethodImpl(MethodImplOptions.AggressiveOptimization | MethodImplOptions.AggressiveInlining)]
     private static MapGridCell WorldToGrid(GameLevelGeometry geo, Vector2 pos) => new(
-        (int)MathF.Round((pos.X - geo.MinX) / CellSize), 
+        (int)MathF.Round((pos.X - geo.MinX) / CellSize),
         (int)MathF.Round((pos.Y - geo.MinY) / CellSize));
 
     [MethodImpl(MethodImplOptions.AggressiveOptimization | MethodImplOptions.AggressiveInlining)]
@@ -285,7 +264,7 @@ public class MapGrid {
         int height = (geo.MaxY - geo.MinY) / CellSize;
         MapGridCellData[,] grid = new MapGridCellData[width, height];
 
-        GeometryFactory fac = NtsGeometryServices.Instance.CreateGeometryFactory();
+        GeometryFactory? fac = NtsGeometryServices.Instance.CreateGeometryFactory();
 
         Parallel.For(0, width, x => {
             for (int y = 0; y < height; ++y) {
@@ -293,9 +272,9 @@ public class MapGrid {
                 int worldY = geo.MinY + y * CellSize;
 
                 Envelope cellEnvelope = new(worldX, worldX + CellSize, worldY, worldY + CellSize);
-                Geometry cellGeometry = fac.ToGeometry(cellEnvelope);
+                Geometry? cellGeometry = fac.ToGeometry(cellEnvelope);
 
-                IList<LineString> query = spatial.Query(new Envelope(
+                IList<LineString>? query = spatial.Query(new(
                     worldX - CellSize - CellWallAvoidance - CellWallUnwalkable,
                     worldX + CellSize + CellSize + CellWallAvoidance + CellWallUnwalkable,
                     worldY - CellSize - CellWallAvoidance - CellWallUnwalkable,
@@ -312,7 +291,7 @@ public class MapGrid {
                     cost += (float)((avoidance - Math.Min(dist, avoidance)) / avoidance);
                 }
 
-                grid[x, y] = new MapGridCellData(walkable, cost);
+                grid[x, y] = new(walkable, cost);
             }
         });
 
@@ -320,36 +299,33 @@ public class MapGrid {
 
         foreach (double[] spawn in map.SpawnPositions) {
             Vector2 spawnPoint = new((float)spawn[0], (float)spawn[1]);
-            MapGridCell GridLocation = WorldToGrid(geo, spawnPoint);
-            IterativeFloodFill(GridLocation, grid, reachableCells);
+            MapGridCell gridLocation = WorldToGrid(geo, spawnPoint);
+            IterativeFloodFill(gridLocation, grid, reachableCells);
         }
 
-        for (int x = 0; x < width; ++x) {
-            for (int y = 0; y < height; ++y) {
-                if (!reachableCells.Contains(new MapGridCell(x, y))) {
-                    grid[x, y] = grid[x, y] with { Walkable = false };
-                }
-            }
+        for (int x = 0; x < width; ++x)
+        for (int y = 0; y < height; ++y) {
+            if (!reachableCells.Contains(new(x, y)))
+                grid[x, y] = grid[x, y] with { Walkable = false };
         }
 
         return grid;
     }
 
     [MethodImpl(MethodImplOptions.AggressiveOptimization)]
-    private static void IterativeFloodFill(MapGridCell startPos, MapGridCellData[,] grid, HashSet<MapGridCell> reachableCells) {
+    private static void IterativeFloodFill(
+        MapGridCell startPos,
+        MapGridCellData[,] grid,
+        HashSet<MapGridCell> reachableCells) {
         Queue<MapGridCell> queue = [];
         queue.Enqueue(startPos);
 
         while (queue.Count > 0) {
             MapGridCell pos = queue.Dequeue();
 
-            if (pos.X < 0 || pos.X >= grid.GetLength(0) || pos.Y < 0 || pos.Y >= grid.GetLength(1)) {
-                continue;
-            }
+            if (pos.X < 0 || pos.X >= grid.GetLength(0) || pos.Y < 0 || pos.Y >= grid.GetLength(1)) continue;
 
-            if (!grid[pos.X, pos.Y].Walkable || !reachableCells.Add(pos)) {
-                continue;
-            }
+            if (!grid[pos.X, pos.Y].Walkable || !reachableCells.Add(pos)) continue;
 
             queue.Enqueue(new(pos.X + 1, pos.Y));
             queue.Enqueue(new(pos.X - 1, pos.Y));

@@ -1,6 +1,4 @@
-﻿using System.Text.Json.Serialization;
-
-namespace AdventureLandSharp.Core.SocketApi;
+﻿namespace AdventureLandSharp.Core.SocketApi;
 
 [AttributeUsage(AttributeTargets.Struct)]
 public class OutboundSocketMessageAttribute(string name) : Attribute {
@@ -74,15 +72,13 @@ public static class Outbound {
 
     [OutboundSocketMessage("party")]
     public readonly record struct PartyAccept(
-        [property: JsonPropertyName("name")] string Name)
-    {
+        [property: JsonPropertyName("name")] string Name) {
         [property: JsonPropertyName("event")] public string Event { get; } = "raccept";
     }
 
     [OutboundSocketMessage("party")]
     public readonly record struct PartyInvite(
-        [property: JsonPropertyName("name")] string Name)
-    {
+        [property: JsonPropertyName("name")] string Name) {
         [property: JsonPropertyName("event")] public string Event { get; } = "request";
     }
 

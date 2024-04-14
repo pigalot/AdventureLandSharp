@@ -1,10 +1,4 @@
-﻿using AdventureLandSharp.Core.Util;
-using System.ComponentModel;
-using System.Numerics;
-using System.Text.Json;
-using System.Text.Json.Serialization;
-
-namespace AdventureLandSharp.Core.SocketApi;
+﻿namespace AdventureLandSharp.Core.SocketApi;
 
 [AttributeUsage(AttributeTargets.Struct)]
 public class InboundSocketMessageAttribute(string name) : Attribute {
@@ -211,10 +205,9 @@ public static class Inbound {
 public readonly record struct DropData(
     [property: JsonPropertyName("id")] string Id,
     [property: JsonPropertyName("x")] float X,
-    [property: JsonPropertyName("y")] float Y)
-{
+    [property: JsonPropertyName("y")] float Y) {
     public Vector2 Position => new(X, Y);
-};
+}
 
 public readonly record struct EntityStats(
     [property: JsonPropertyName("armor")] float Armour,
@@ -223,17 +216,15 @@ public readonly record struct EntityStats(
     [property: JsonPropertyName("range")] float AttackRange,
     [property: JsonPropertyName("resistance")] float Resistance,
     [property: JsonPropertyName("speed")] float Speed,
-    [property: JsonPropertyName("xp")] float Xp)
-{
+    [property: JsonPropertyName("xp")] float Xp) {
     public EntityStats(GameDataMonster monsterDef) : this(
-        Armour: default,
-        AttackDamage: (float)monsterDef.Attack,
-        AttackFrequency: (float)monsterDef.Frequency,
-        AttackRange: (float)monsterDef.Range,
-        Resistance: default,
-        Speed: (float)monsterDef.Speed,
-        Xp: (float)monsterDef.Xp)
-    { }
+        default,
+        (float)monsterDef.Attack,
+        (float)monsterDef.Frequency,
+        (float)monsterDef.Range,
+        default,
+        (float)monsterDef.Speed,
+        (float)monsterDef.Xp) { }
 
     public EntityStats Update(JsonElement source) => this with {
         Armour = source.GetFloat("armor", Armour),
@@ -247,19 +238,18 @@ public readonly record struct EntityStats(
 }
 
 public readonly record struct EntityVitals(
-    [property: JsonConverter(typeof(JsonConverterBool)), JsonPropertyName("rip")] bool Dead,
-    [property: JsonPropertyName("hp"), JsonRequired()] float Hp,
-    [property: JsonPropertyName("mp"), JsonRequired()] float Mp,
+    [property: JsonConverter(typeof(JsonConverterBool))] [property: JsonPropertyName("rip")] bool Dead,
+    [property: JsonPropertyName("hp")] [property: JsonRequired] float Hp,
+    [property: JsonPropertyName("mp")] [property: JsonRequired] float Mp,
     [property: JsonPropertyName("max_hp")] float MaxHp,
     [property: JsonPropertyName("max_mp")] float MaxMp
 ) {
     public EntityVitals(GameDataMonster monsterDef) : this(
-        Dead: false,
-        Hp: (float)monsterDef.Hp,
+        false,
+        (float)monsterDef.Hp,
         MaxHp: (float)monsterDef.Hp,
         Mp: (float)monsterDef.Mp,
-        MaxMp: (float)monsterDef.Mp)
-    { }
+        MaxMp: (float)monsterDef.Mp) { }
 
     public EntityVitals Update(JsonElement source) => this with {
         Dead = source.GetBool("rip", false),
@@ -271,9 +261,9 @@ public readonly record struct EntityVitals(
 }
 
 public readonly record struct Item(
-    [property: JsonPropertyName("name")] string Name, 
+    [property: JsonPropertyName("name")] string Name,
     [property: JsonPropertyName("level")] long Level,
-    [property: JsonPropertyName("q"), DefaultValue(1)] long Quantity,
+    [property: JsonPropertyName("q")] [property: DefaultValue(1)] long Quantity,
     [property: JsonPropertyName("p")] string? SpecialType
 );
 
@@ -298,14 +288,15 @@ public readonly record struct PlayerEquipment(
 
 public readonly record struct PlayerInventory(
     [property: JsonPropertyName("gold")] long Gold,
-    [property: JsonPropertyName("items")] List<Item?> Items)
-{
+    [property: JsonPropertyName("items")] List<Item?> Items) {
     public PlayerInventory Update(JsonElement source) => this with {
         Gold = source.GetLong("gold", Gold),
         Items = source.TryGetProperty("items", out JsonElement items) ? items.Deserialize<List<Item?>>()! : Items
     };
 
-    public readonly int FindSlotId(string name) => Items.FindIndex(item => item?.Name == name);
+    public readonly int FindSlotId(string name) {
+        return Items.FindIndex(item => item?.Name == name);
+    }
 }
 
 public readonly record struct StatusEffect(

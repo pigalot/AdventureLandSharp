@@ -1,6 +1,3 @@
-using AdventureLandSharp.Core;
-using AdventureLandSharp.Core.SocketApi;
-
 namespace AdventureLandSharp;
 
 public enum CharacterClass {
@@ -11,10 +8,10 @@ public enum CharacterClass {
     Ranger,
     Rogue,
     Warrior
-};
+}
 
 public interface ICharacter {
-    public bool Update(float dt);
+    public Task<bool> Update(float dt);
 }
 
 public interface ICharacterFactory {

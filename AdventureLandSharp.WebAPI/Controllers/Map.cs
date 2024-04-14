@@ -41,5 +41,7 @@ public class MapController(World world) : ControllerBase {
     [HttpGet("List", Name = "GetMapList")]
     [ProducesResponseType(typeof(IEnumerable<string>), StatusCodes.Status200OK)]
     [Produces("application/json")]
-    public IActionResult List() => Ok(world.Maps.Select(x => x.Key));
+    public IActionResult List() {
+        return Ok(world.Maps.Select(x => x.Key));
+    }
 }

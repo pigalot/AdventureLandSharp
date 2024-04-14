@@ -1,0 +1,52 @@
+[*]
+
+# Microsoft .NET properties
+csharp_indent_braces = false
+csharp_new_line_before_catch = false
+csharp_new_line_before_else = false
+csharp_new_line_before_finally = false
+csharp_new_line_before_open_brace = accessors, control_blocks, events, indexers, properties
+csharp_preferred_modifier_order = private, public, protected, static, file, new, override, sealed, virtual, abstract, internal, async, extern, unsafe, volatile, readonly, required:suggestion
+csharp_space_after_cast = false
+csharp_style_var_elsewhere = false:suggestion
+csharp_style_var_for_built_in_types = false:suggestion
+csharp_style_var_when_type_is_apparent = false:suggestion
+
+# ReSharper properties
+resharper_align_multiline_binary_expressions_chain = false
+resharper_align_multiline_statement_conditions = false
+resharper_blank_lines_after_block_statements = 0
+resharper_blank_lines_after_control_transfer_statements = 1
+resharper_blank_lines_around_auto_property = 0
+resharper_blank_lines_around_single_line_type = 0
+resharper_braces_for_for = required
+resharper_braces_for_foreach = required
+resharper_braces_for_ifelse = not_required
+resharper_braces_redundant = false
+resharper_csharp_allow_comment_after_lbrace = true
+resharper_csharp_blank_lines_around_field = 0
+resharper_csharp_blank_lines_around_invocable = 0
+resharper_csharp_empty_block_style = together
+resharper_csharp_insert_final_newline = true
+resharper_csharp_max_line_length = 172
+resharper_csharp_other_braces = end_of_line
+resharper_csharp_space_before_type_parameter_constraint_colon = false
+resharper_csharp_wrap_after_declaration_lpar = true
+resharper_csharp_wrap_before_ternary_opsigns = false
+resharper_csharp_wrap_parameters_style = chop_if_long
+resharper_csharp_wrap_ternary_expr_style = wrap_if_long
+resharper_instance_members_qualify_declared_in =
+resharper_max_attribute_length_for_same_line = 10000
+resharper_method_or_operator_body = expression_body
+resharper_object_creation_when_type_not_evident = target_typed
+resharper_parentheses_redundancy_style = remove
+resharper_place_accessorholder_attribute_on_same_line = true
+resharper_place_expr_method_on_single_line = true
+resharper_place_expr_property_on_single_line = true
+resharper_place_record_field_attribute_on_same_line = true
+resharper_place_simple_anonymousmethod_on_single_line = false
+resharper_place_simple_embedded_statement_on_same_line = true
+resharper_place_simple_list_pattern_on_single_line = false
+resharper_space_within_single_line_array_initializer_braces = true
+resharper_wrap_after_primary_constructor_declaration_lpar = false
+resharper_wrap_list_pattern = chop_always
